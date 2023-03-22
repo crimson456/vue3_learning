@@ -40,6 +40,7 @@ const enum TargetType {
   COLLECTION = 2
 }
 
+// 判断对象的类型并返回   1(对象、数组)，2(集合)，0(其他对象)
 function targetTypeMap(rawType: string) {
   switch (rawType) {
     case 'Object':
@@ -55,6 +56,7 @@ function targetTypeMap(rawType: string) {
   }
 }
 
+// 获取目标的类型   1(对象、数组)，2(集合)，0(其他对象、__v_skip为true的对象、不可扩展的对象)
 function getTargetType(value: Target) {
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
@@ -168,6 +170,7 @@ export function readonly<T extends object>(
  * returned properties.
  * This is used for creating the props proxy object for stateful components.
  */
+// 创建浅只读的响应式对象
 export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   return createReactiveObject(
     target,
@@ -178,6 +181,7 @@ export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   )
 }
 
+// 响应式核心方法
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
@@ -185,6 +189,7 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>,
   proxyMap: WeakMap<Target, any>
 ) {
+  // reactive方法只处理对象类型数据
   if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
@@ -193,26 +198,29 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
+  // 已经处理过的对象直接返回
+  if (target[ReactiveFlags.RAW] && !(isReadonly && target[ReactiveFlags.IS_REACTIVE])) {
     return target
   }
   // target already has corresponding Proxy
+  // 如果对象已经存在proxy则直接返回缓存的proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
   }
   // only specific value types can be observed.
+  // 获取目标的类型   1(对象、数组)，2(集合)，0(其他对象、__v_skip为true的对象、不可扩展的对象)
   const targetType = getTargetType(target)
+  // 类型为0直接返回
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // 创建proxy，根据类型传入集合的处理函数和普通对象的处理函数
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
+  // 缓存对象的proxy
   proxyMap.set(target, proxy)
   return proxy
 }

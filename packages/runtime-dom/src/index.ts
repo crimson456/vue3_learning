@@ -39,10 +39,10 @@ let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
+// 返回renderer，renderer = { render, hydrate, createApp }
 function ensureRenderer() {
   return (
-    renderer ||
-    (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
+    renderer || (renderer = createRenderer<Node, Element | ShadowRoot>(rendererOptions))
   )
 }
 
@@ -71,6 +71,7 @@ export const createApp = ((...args) => {
     injectCompilerOptionsCheck(app)
   }
 
+  // 解构后重新赋值，清空容器(某dom元素)并将render函数挂载在容器中
   const { mount } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
@@ -99,6 +100,7 @@ export const createApp = ((...args) => {
     }
 
     // clear content before mounting
+    // 清空容器
     container.innerHTML = ''
     const proxy = mount(container, false, container instanceof SVGElement)
     if (container instanceof Element) {

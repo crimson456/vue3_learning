@@ -40,11 +40,7 @@ export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
-      trackEffects(ref.dep || (ref.dep = createDep()), {
-        target: ref,
-        type: TrackOpTypes.GET,
-        key: 'value'
-      })
+      trackEffects(ref.dep || (ref.dep = createDep()), { target: ref, type: TrackOpTypes.GET, key: 'value' })
     } else {
       trackEffects(ref.dep || (ref.dep = createDep()))
     }
@@ -55,12 +51,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
   if (ref.dep) {
     if (__DEV__) {
-      triggerEffects(ref.dep, {
-        target: ref,
-        type: TriggerOpTypes.SET,
-        key: 'value',
-        newValue: newVal
-      })
+      triggerEffects(ref.dep, { target: ref, type: TriggerOpTypes.SET, key: 'value', newValue: newVal })
     } else {
       triggerEffects(ref.dep)
     }
@@ -72,9 +63,8 @@ export function isRef(r: any): r is Ref {
   return !!(r && r.__v_isRef === true)
 }
 
-export function ref<T extends object>(
-  value: T
-): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+// ref方法的定义
+export function ref<T extends object>( value: T ): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -85,15 +75,14 @@ declare const ShallowRefMarker: unique symbol
 
 export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
 
-export function shallowRef<T extends object>(
-  value: T
-): T extends Ref ? T : ShallowRef<T>
+export function shallowRef<T extends object>( value: T): T extends Ref ? T : ShallowRef<T>
 export function shallowRef<T>(value: T): ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+// ref的主逻辑：创建一个RefImpl类实例
 function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
     return rawValue
@@ -101,6 +90,7 @@ function createRef(rawValue: unknown, shallow: boolean) {
   return new RefImpl(rawValue, shallow)
 }
 
+// 普通ref核心类
 class RefImpl<T> {
   private _value: T
   private _rawValue: T
@@ -119,9 +109,9 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
-    const useDirectValue =
-      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+    const useDirectValue = this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
+    // 对比新旧值，不同则更改
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
@@ -151,18 +141,16 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
-export function proxyRefs<T extends object>(
-  objectWithRefs: T
-): ShallowUnwrapRef<T> {
+// 如果对象本身为reactive处理过的对象，则返回原值
+// 如果对象为ref，则通过代理访问或设置ref对象的原值.value字段
+// 此处即为自动浅层解包
+export function proxyRefs<T extends object>( objectWithRefs: T): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
     ? objectWithRefs
     : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
-export type CustomRefFactory<T> = (
-  track: () => void,
-  trigger: () => void
-) => {
+export type CustomRefFactory<T> = ( track: () => void, trigger: () => void) => {
   get: () => T
   set: (value: T) => void
 }
@@ -200,6 +188,8 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 export type ToRefs<T = any> = {
   [K in keyof T]: ToRef<T[K]>
 }
+// 遍历调用toRef，生成一个新对象，成员对应原本proxy的每个成员
+// 一般用于setup返回值中的解构
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -211,6 +201,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
+// toRef的核心类
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
@@ -232,26 +223,14 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
-export function toRef<T extends object, K extends keyof T>(
-  object: T,
-  key: K
-): ToRef<T[K]>
-
-export function toRef<T extends object, K extends keyof T>(
-  object: T,
-  key: K,
-  defaultValue: T[K]
-): ToRef<Exclude<T[K], undefined>>
-
-export function toRef<T extends object, K extends keyof T>(
-  object: T,
-  key: K,
-  defaultValue?: T[K]
-): ToRef<T[K]> {
+// 获取响应式对象上的一个成员，并包装成一个ObjectRefImpl类实例
+// 使用对象上的getter和setter方法获取原对象上的成员的值而不丢失响应式
+// 此方法主要结局于proxy对象无法解构出对应的响应式成员
+export function toRef<T extends object, K extends keyof T>( object: T, key: K): ToRef<T[K]>
+export function toRef<T extends object, K extends keyof T>( object: T, key: K, defaultValue: T[K]): ToRef<Exclude<T[K], undefined>>
+export function toRef<T extends object, K extends keyof T>( object: T, key: K,  defaultValue?: T[K]): ToRef<T[K]> {
   const val = object[key]
-  return isRef(val)
-    ? val
-    : (new ObjectRefImpl(object, key, defaultValue) as any)
+  return isRef(val) ? val : (new ObjectRefImpl(object, key, defaultValue) as any)
 }
 
 // corner case when use narrows type

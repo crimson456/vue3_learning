@@ -50,6 +50,8 @@ let currentFlushPromise: Promise<void> | null = null
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 
+// nextTick方法直接使用同一个promise
+// 此处的this不会在调用参数中，ts特殊写法
 export function nextTick<T = void>(
   this: T,
   fn?: (this: T) => void
@@ -62,6 +64,7 @@ export function nextTick<T = void>(
 // Use binary-search to find a suitable position in the queue,
 // so that the queue maintains the increasing order of job's id,
 // which can prevent the job from being skipped and also can avoid repeated patching.
+// 通过二分法查找id在队列中的插入位置
 function findInsertionIndex(id: number) {
   // the start index should be `flushIndex + 1`
   let start = flushIndex + 1
@@ -76,6 +79,7 @@ function findInsertionIndex(id: number) {
   return start
 }
 
+// 将effect的run方法放入任务队列，并统一在微任务队列中执行
 export function queueJob(job: SchedulerJob) {
   // the dedupe search uses the startIndex argument of Array.includes()
   // by default the search index includes the current job that is being run
@@ -85,20 +89,21 @@ export function queueJob(job: SchedulerJob) {
   // ensure it doesn't end up in an infinite loop.
   if (
     !queue.length ||
-    !queue.includes(
-      job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
-    )
+    !queue.includes( job, isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex )
   ) {
+    // 没有id放在队尾
     if (job.id == null) {
       queue.push(job)
-    } else {
+    } 
+    // 有id插入对应位置
+    else {
       queue.splice(findInsertionIndex(job.id), 0, job)
     }
     queueFlush()
   }
 }
 
+// 一个任务周期中第一次将任务排入任务队列时，将执行任务队列中放入微任务队列
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
@@ -106,6 +111,7 @@ function queueFlush() {
   }
 }
 
+// 找到队列中对应的任务并删除
 export function invalidateJob(job: SchedulerJob) {
   const i = queue.indexOf(job)
   if (i > flushIndex) {
@@ -113,18 +119,20 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
+// 向pendingPostFlushCbs中放入任务
 export function queuePostFlushCb(cb: SchedulerJobs) {
+  // 函数情况
   if (!isArray(cb)) {
-    if (
-      !activePostFlushCbs ||
-      !activePostFlushCbs.includes(
-        cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex
-      )
-    ) {
+    // 此种情况为
+    // 1.不在flushPostFlushCbs执行过程中的情况
+    // 2.在flushPostFlushCbs执行过程中，后续的任务中不存在相同的任务
+    if ( !activePostFlushCbs || !activePostFlushCbs.includes( cb, cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex )) {
       pendingPostFlushCbs.push(cb)
     }
-  } else {
+  } 
+  // 数组情况
+  // 组件生命周期钩子都会到此流程
+  else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
@@ -133,6 +141,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
   queueFlush()
 }
 
+// 直接执行并移除队列中带pre字段的任务
 export function flushPreFlushCbs(
   seen?: CountMap,
   // if currently flushing, skip the current job itself
@@ -154,12 +163,15 @@ export function flushPreFlushCbs(
   }
 }
 
+// 将pendingPostFlushCbs中的回调依次执行
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
+    // 去重并且复制
     const deduped = [...new Set(pendingPostFlushCbs)]
     pendingPostFlushCbs.length = 0
 
     // #1947 already has active queue, nested flushPostFlushCbs call
+    // 递归调用的情况
     if (activePostFlushCbs) {
       activePostFlushCbs.push(...deduped)
       return
@@ -170,19 +182,17 @@ export function flushPostFlushCbs(seen?: CountMap) {
       seen = seen || new Map()
     }
 
+    // 调序
     activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
 
+    // 将队列中的任务依次执行
     for (
       postFlushIndex = 0;
       postFlushIndex < activePostFlushCbs.length;
       postFlushIndex++
     ) {
-      if (
-        __DEV__ &&
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      ) {
-        continue
-      }
+      // 递归计数
+      if ( __DEV__ && checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex]) ) { continue }
       activePostFlushCbs[postFlushIndex]()
     }
     activePostFlushCbs = null
@@ -193,8 +203,10 @@ export function flushPostFlushCbs(seen?: CountMap) {
 const getId = (job: SchedulerJob): number =>
   job.id == null ? Infinity : job.id
 
+// 排序函数
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   const diff = getId(a) - getId(b)
+  // 此处的作用应该为: 组件卸载和父组件更新导致的更新同时在队列中时，忽略当前组件的更新
   if (diff === 0) {
     if (a.pre && !b.pre) return -1
     if (b.pre && !a.pre) return 1
@@ -202,6 +214,7 @@ const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   return diff
 }
 
+// 执行所有任务队列中的任务
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
   isFlushing = true
@@ -214,8 +227,12 @@ function flushJobs(seen?: CountMap) {
   // 1. Components are updated from parent to child. (because parent is always
   //    created before the child so its render effect will have smaller
   //    priority number)
+  // 确保父组件在前
   // 2. If a component is unmounted during a parent component's update,
   //    its update can be skipped.
+  // 组件卸载和父组件更新导致的更新同时在队列中时，忽略当前组件的更新
+
+  // 对队列进行排序
   queue.sort(comparator)
 
   // conditional usage of checkRecursiveUpdate must be determined out of
@@ -223,14 +240,14 @@ function flushJobs(seen?: CountMap) {
   // inside try-catch. This can leave all warning code unshaked. Although
   // they would get eventually shaken by a minifier like terser, some minifiers
   // would fail to do that (e.g. https://github.com/evanw/esbuild/issues/1610)
-  const check = __DEV__
-    ? (job: SchedulerJob) => checkRecursiveUpdates(seen!, job)
-    : NOOP
+  const check = __DEV__ ? (job: SchedulerJob) => checkRecursiveUpdates(seen!, job) : NOOP
 
   try {
+    // 依次调用队列中的所有任务函数
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
       if (job && job.active !== false) {
+        // 计算递归调用次数
         if (__DEV__ && check(job)) {
           continue
         }
@@ -239,9 +256,11 @@ function flushJobs(seen?: CountMap) {
       }
     }
   } finally {
+    // 置零
     flushIndex = 0
     queue.length = 0
 
+    // 
     flushPostFlushCbs(seen)
 
     isFlushing = false
@@ -254,10 +273,12 @@ function flushJobs(seen?: CountMap) {
   }
 }
 
+// 维护一个以任务函数作为成员名，递归调用次数作为成员值的Map实例
 function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
   if (!seen.has(fn)) {
     seen.set(fn, 1)
   } else {
+    // count用于标记某个任务递归调用的次数
     const count = seen.get(fn)!
     if (count > RECURSION_LIMIT) {
       const instance = fn.ownerInstance

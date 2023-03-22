@@ -459,6 +459,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 创建组件实例
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -469,6 +470,7 @@ export function createComponentInstance(
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
+  // 创建组件实例
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
@@ -544,15 +546,19 @@ export function createComponentInstance(
     ec: null,
     sp: null
   }
+  // 创建组件上下文
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
     instance.ctx = { _: instance }
   }
+  // 根实例
   instance.root = parent ? parent.root : instance
+
   instance.emit = emit.bind(null, instance)
 
   // apply custom element special handling
+  // 自定义元素相关
   if (vnode.ce) {
     vnode.ce(instance)
   }
@@ -577,6 +583,7 @@ export const unsetCurrentInstance = () => {
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
+// 验证组件名是否合法，不能和slot、template和通用标签重名
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
   if (isBuiltInTag(name) || appIsNativeTag(name)) {
@@ -586,6 +593,7 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+// 根据shapeFlag判断组件是否有状态
 export function isStatefulComponent(instance: ComponentInternalInstance) {
   return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
 }
@@ -599,10 +607,14 @@ export function setupComponent(
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode
+  // 根据shapeFlag判断组件是否有状态
   const isStateful = isStatefulComponent(instance)
+  // 解析props和attrs
   initProps(instance, props, isStateful, isSSR)
+  // 解析插槽
   initSlots(instance, children)
 
+  // 处理组件状态并且获取setup的返回值
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -610,12 +622,15 @@ export function setupComponent(
   return setupResult
 }
 
+// 
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
 ) {
+  // 此处type为创建组件是传入的options
   const Component = instance.type as ComponentOptions
 
+  // ???
   if (__DEV__) {
     if (Component.name) {
       validateComponentName(Component.name, instance.appContext.config)
@@ -644,27 +659,35 @@ function setupStatefulComponent(
   instance.accessCache = Object.create(null)
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+  // 生成一个代理，访问属性时依次查找setupState、data、props、ctx获取属性
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
   // 2. call setup()
   const { setup } = Component
+  // 存在setup
   if (setup) {
-    const setupContext = (instance.setupContext =
-      setup.length > 1 ? createSetupContext(instance) : null)
+    // 创建setup的上下文，抽离了4个成员
+    const setupContext = (instance.setupContext = setup.length > 1 ? createSetupContext(instance) : null)
 
+    // 设置当前实例用于收集生命周期
     setCurrentInstance(instance)
+    // 暂停依赖收集
+    // 此处暂停依赖收集的原因：在祖先组件effcet下创建新组件时，防止setup中新声明的响应式数据直接收集祖先组件的effect函数
     pauseTracking()
+    // 调用当前实例的setup并获取结果
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
+      // 第四个参数为调用时使用的参数
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
     unsetCurrentInstance()
 
+    // 对setup函数返回promise的处理
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
@@ -698,16 +721,20 @@ function setupStatefulComponent(
     } else {
       handleSetupResult(instance, setupResult, isSSR)
     }
-  } else {
+  } 
+  // 没有setup的情况，直接使用render字段或者编译模板
+  else {
     finishComponentSetup(instance, isSSR)
   }
 }
 
+// 处理setup的返回值
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
   isSSR: boolean
 ) {
+  // setup返回值为函数，置为render函数
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -717,7 +744,10 @@ export function handleSetupResult(
     } else {
       instance.render = setupResult as InternalRenderFunction
     }
-  } else if (isObject(setupResult)) {
+  } 
+  // 返回值为对象，置为setupState，并浅解包
+  else if (isObject(setupResult)) {
+    // 警告返回虚拟节点的情况
     if (__DEV__ && isVNode(setupResult)) {
       warn(
         `setup() should not return VNodes directly - ` +
@@ -729,17 +759,22 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // proxyRefs浅层解包ref，这样可以在模板上直接访问，无需.value
     instance.setupState = proxyRefs(setupResult)
+    // 开发环境下将setup返回的状态暴露在组件实例的上下文中
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
     }
-  } else if (__DEV__ && setupResult !== undefined) {
+  } 
+  // 其他情况做警告
+  else if (__DEV__ && setupResult !== undefined) {
     warn(
       `setup() should return an object. Received: ${
         setupResult === null ? 'null' : typeof setupResult
       }`
     )
   }
+  // 使用render字段或者编译模板
   finishComponentSetup(instance, isSSR)
 }
 
@@ -764,14 +799,18 @@ export function registerRuntimeCompiler(_compile: any) {
   }
 }
 
-// dev only
+// dev onlyrenderSlot
 export const isRuntimeOnly = () => !compile
 
+// 主要做了：
+// 1. setup中不返回render函数的处理:使用render字段或者使用template字段模板编译
+// 2. 合并选项式api
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
   skipOptions?: boolean
 ) {
+  // instance.type存放的是用户自写的初始化对象
   const Component = instance.type as ComponentOptions
 
   if (__COMPAT__) {
@@ -784,31 +823,22 @@ export function finishComponentSetup(
 
   // template / render function normalization
   // could be already set when returned from setup()
+  // 如果setup中不返回render函数，则使用配置项中的render
+  // 如果配置项中也没用，则尝试编译模板
   if (!instance.render) {
     // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
     // is done by server-renderer
     if (!isSSR && compile && !Component.render) {
-      const template =
-        (__COMPAT__ &&
-          instance.vnode.props &&
-          instance.vnode.props['inline-template']) ||
-        Component.template ||
-        resolveMergedOptions(instance).template
+      const template = (__COMPAT__ && instance.vnode.props && instance.vnode.props['inline-template']) 
+                      || Component.template || resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
         }
         const { isCustomElement, compilerOptions } = instance.appContext.config
-        const { delimiters, compilerOptions: componentCompilerOptions } =
-          Component
+        const { delimiters, compilerOptions: componentCompilerOptions } = Component
         const finalCompilerOptions: CompilerOptions = extend(
-          extend(
-            {
-              isCustomElement,
-              delimiters
-            },
-            compilerOptions
-          ),
+          extend({ isCustomElement, delimiters }, compilerOptions),
           componentCompilerOptions
         )
         if (__COMPAT__) {
@@ -837,6 +867,7 @@ export function finishComponentSetup(
   }
 
   // support for 2.x options
+  // 合并选项式api  ???
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()
@@ -847,8 +878,10 @@ export function finishComponentSetup(
 
   // warn missing template/render
   // the runtime compilation of template in SSR is done by server-render
+  // 警告缺失render函数
   if (__DEV__ && !Component.render && instance.render === NOOP && !isSSR) {
     /* istanbul ignore if */
+    // 警告缺失编译器
     if (!compile && Component.template) {
       warn(
         `Component provided template option but ` +
@@ -895,6 +928,7 @@ function createAttrsProxy(instance: ComponentInternalInstance): Data {
   )
 }
 
+// 创建setup上下文，抽离了attrs、slots、emit、expose
 export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
@@ -950,15 +984,19 @@ export function createSetupContext(
   }
 }
 
+// expose方法的处理
 export function getExposeProxy(instance: ComponentInternalInstance) {
   if (instance.exposed) {
     return (
-      instance.exposeProxy ||
-      (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+      // 为expose方法创建代理
+      instance.exposeProxy || (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
         get(target, key: string) {
+          // expose暴露的对象上取
           if (key in target) {
             return target[key]
-          } else if (key in publicPropertiesMap) {
+          } 
+          // $开头的实例通用方法
+          else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
         },

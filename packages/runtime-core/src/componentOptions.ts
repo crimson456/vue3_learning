@@ -578,6 +578,7 @@ const enum OptionTypes {
   INJECT = 'Inject'
 }
 
+// 创建一个重复警告函数
 function createDuplicateChecker() {
   const cache = Object.create(null)
   return (type: OptionTypes, key: string) => {
@@ -639,8 +640,9 @@ export function applyOptions(instance: ComponentInternalInstance) {
     filters
   } = options
 
+  // 创建查重的函数
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
-
+  // instance.propsOptions[0]中的成员重复则警告   ???
   if (__DEV__) {
     const [propsOptions] = instance.propsOptions
     if (propsOptions) {
@@ -659,12 +661,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    resolveInjections(
-      injectOptions,
-      ctx,
-      checkDuplicateProperties,
-      instance.appContext.config.unwrapInjectedRef
-    )
+    resolveInjections( injectOptions, ctx, checkDuplicateProperties, instance.appContext.config.unwrapInjectedRef )
   }
 
   if (methods) {
@@ -830,6 +827,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
     }
   }
 
+  // expose方法的处理
+  // expose方法处理自定义要暴露出去的属性，默认是全部会暴露
   if (isArray(expose)) {
     if (expose.length) {
       const exposed = instance.exposed || (instance.exposed = {})
@@ -943,6 +942,7 @@ export function createWatcher(
   const getter = key.includes('.')
     ? createPathGetter(publicThis, key)
     : () => (publicThis as any)[key]
+  
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
@@ -992,10 +992,7 @@ export function resolveMergedOptions(
   if (cached) {
     resolved = cached
   } else if (!globalMixins.length && !mixins && !extendsOptions) {
-    if (
-      __COMPAT__ &&
-      isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)
-    ) {
+    if ( __COMPAT__ && isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance) ) {
       resolved = extend({}, base) as MergedComponentOptions
       resolved.parent = instance.parent && instance.parent.proxy
       resolved.propsData = instance.vnode.props

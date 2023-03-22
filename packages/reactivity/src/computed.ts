@@ -23,6 +23,10 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
+// 计算属性主要流程:
+// 1.创建effect监控getter中的响应式数据变化，变化时将_dirty标记置真，并触发更新 
+// 2.触发更新会获取当前计算属性的值，取值时调用收集依赖，并且获取最新值
+// 计算属性核心类
 export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
@@ -41,7 +45,9 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
+    // 创建effect
     this.effect = new ReactiveEffect(getter, () => {
+      // 如果依赖项改变，则将数据变为脏，并触发所有依赖此计算属性effect的effect更新
       if (!this._dirty) {
         this._dirty = true
         triggerRefValue(this)
@@ -55,7 +61,9 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
+    // 收集依赖此计算属性effect的effect
     trackRefValue(self)
+    // 数据如果为脏则重新执行effect获取新数据
     if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
@@ -68,22 +76,14 @@ export class ComputedRefImpl<T> {
   }
 }
 
-export function computed<T>(
-  getter: ComputedGetter<T>,
-  debugOptions?: DebuggerOptions
-): ComputedRef<T>
-export function computed<T>(
-  options: WritableComputedOptions<T>,
-  debugOptions?: DebuggerOptions
-): WritableComputedRef<T>
-export function computed<T>(
-  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
-  debugOptions?: DebuggerOptions,
-  isSSR = false
-) {
+// 计算属性定义
+export function computed<T>( getter: ComputedGetter<T>, debugOptions?: DebuggerOptions): ComputedRef<T>
+export function computed<T>(debugOptions?: DebuggerOptions): WritableComputedRef<T>
+export function computed<T>(getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,debugOptions?: DebuggerOptions,isSSR = false) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
 
+  // 处理只有getter的写法
   const onlyGetter = isFunction(getterOrOptions)
   if (onlyGetter) {
     getter = getterOrOptions
@@ -97,6 +97,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
+  // 定义核心类
   const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
 
   if (__DEV__ && debugOptions && !isSSR) {

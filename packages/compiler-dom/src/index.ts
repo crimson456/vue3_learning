@@ -43,6 +43,7 @@ export function compile(
 ): CodegenResult {
   return baseCompile(
     template,
+    // extend内部为Object.assign()，浅复制后面对象的属性到第一个对象
     extend({}, parserOptions, options, {
       nodeTransforms: [
         // ignore <script> and <tag>

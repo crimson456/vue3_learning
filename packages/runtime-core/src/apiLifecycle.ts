@@ -14,25 +14,30 @@ import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
+// 对钩子函数进行包装并且挂载到实例上的对应缩写字段上
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false
 ): Function | undefined {
+  // target存在则为setup中调用
   if (target) {
+    // 钩子函数放在实例上对应缩写的字段上
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
     // can be properly deduped by the scheduler. "__weh" stands for "with error
     // handling".
-    const wrappedHook =
-      hook.__weh ||
-      (hook.__weh = (...args: unknown[]) => {
+    // 对钩子函数进行包装
+    const wrappedHook = hook.__weh || (hook.__weh = 
+      (...args: unknown[]) => {
+        // 组件没有挂载则直接返回不进行调用
         if (target.isUnmounted) {
           return
         }
         // disable tracking inside all lifecycle hooks
         // since they can potentially be called inside effects.
+        // 停止依赖跟踪，原因：在生命周期钩子执行在祖先组件下的effect函数内部时，防止钩子函数中访问的响应式数据直接收集祖先组件的effect函数
         pauseTracking()
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
@@ -43,13 +48,16 @@ export function injectHook(
         resetTracking()
         return res
       })
+    // 将包装后的钩子函数放在队头或队尾
     if (prepend) {
       hooks.unshift(wrappedHook)
     } else {
       hooks.push(wrappedHook)
     }
     return wrappedHook
-  } else if (__DEV__) {
+  } 
+  // target不存在的情况为在setup函数外调用钩子函数，进行警告
+  else if (__DEV__) {
     const apiName = toHandlerKey(ErrorTypeStrings[type].replace(/ hook$/, ''))
     warn(
       `${apiName} is called when there is no active component instance to be ` +
@@ -65,6 +73,7 @@ export function injectHook(
 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  // 注意此处target为默认为currentInstance，在组件setup函数外调用
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&

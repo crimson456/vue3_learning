@@ -37,15 +37,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       ? ((key = key.slice(1)), false)
       : shouldSetAsProp(el, key, nextValue, isSVG)
   ) {
-    patchDOMProp(
-      el,
-      key,
-      nextValue,
-      prevChildren,
-      parentComponent,
-      parentSuspense,
-      unmountChildren
-    )
+    patchDOMProp( el, key, nextValue, prevChildren, parentComponent, parentSuspense, unmountChildren )
   } else {
     // special case for <input v-model type="checkbox"> with
     // :true-value & :false-value

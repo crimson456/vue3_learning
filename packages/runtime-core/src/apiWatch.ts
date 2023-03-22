@@ -159,6 +159,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   cb: any,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle {
+  // 警告回调不为函数
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -169,11 +170,13 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
+// watch方法的主逻辑
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  // 警告immediate，deep选项在回调cb不存在时都不可用
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -205,6 +208,7 @@ function doWatch(
   let forceTrigger = false
   let isMultiSource = false
 
+  // 对第一个入参的形式进行判断 ???
   if (isRef(source)) {
     getter = () => source.value
     forceTrigger = isShallow(source)
@@ -229,23 +233,13 @@ function doWatch(
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
-      getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+      getter = () => callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
       // no cb -> simple effect
       getter = () => {
-        if (instance && instance.isUnmounted) {
-          return
-        }
-        if (cleanup) {
-          cleanup()
-        }
-        return callWithAsyncErrorHandling(
-          source,
-          instance,
-          ErrorCodes.WATCH_CALLBACK,
-          [onCleanup]
-        )
+        if (instance && instance.isUnmounted) { return }
+        if (cleanup) { cleanup() }
+        return callWithAsyncErrorHandling( source, instance, ErrorCodes.WATCH_CALLBACK, [onCleanup] )
       }
     }
   } else {
@@ -268,6 +262,7 @@ function doWatch(
     }
   }
 
+  // 对象的形式，遍历对象下所有的没有相互引用的子孙成员，从而进行深度观察
   if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
@@ -313,22 +308,17 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
-      if (
-        deep ||
-        forceTrigger ||
+      if ( deep || forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
-            )
+          ? (newValue as any[]).some((v, i) => hasChanged(v, (oldValue as any[])[i]))
           : hasChanged(newValue, oldValue)) ||
-        (__COMPAT__ &&
-          isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+        (__COMPAT__ && isArray(newValue) && isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
         }
+        // 调用回调，传入参数
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
@@ -439,15 +429,18 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
+// 触发对象下的所有属性
 export function traverse(value: unknown, seen?: Set<unknown>) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
   seen = seen || new Set()
+  // 有相互引用的情况直接返回
   if (seen.has(value)) {
     return value
   }
   seen.add(value)
+  // 遍历对象递归调用
   if (isRef(value)) {
     traverse(value.value, seen)
   } else if (isArray(value)) {

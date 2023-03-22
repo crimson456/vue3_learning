@@ -171,6 +171,7 @@ export function h<P>(
 ): VNode
 
 // Actual implementation
+// h函数的本质就是处理跟多形式的参数并调用createVNode方法
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   const l = arguments.length
   if (l === 2) {

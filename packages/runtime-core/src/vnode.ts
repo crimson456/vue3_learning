@@ -380,10 +380,10 @@ let vnodeArgsTransformer:
  * It is *internal* but needs to be exposed for test-utils to pick up proper
  * typings
  */
+// 这两个函数用于测试中进行参数转换
 export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
   vnodeArgsTransformer = transformer
 }
-
 const createVNodeWithArgsTransform = (
   ...args: Parameters<typeof _createVNode>
 ): VNode => {
@@ -423,6 +423,7 @@ function createBaseVNode(
   isBlockNode = false,
   needFullChildrenNormalization = false
 ) {
+  // 创建一个节点
   const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -452,7 +453,9 @@ function createBaseVNode(
     ctx: currentRenderingInstance
   } as VNode
 
+  // 根节点会走此分支
   if (needFullChildrenNormalization) {
+    // 规范化children字段格式，并且添加子节点相关的shapeFlag
     normalizeChildren(vnode, children)
     // normalize suspense children
     if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
@@ -467,6 +470,7 @@ function createBaseVNode(
   }
 
   // validate key
+  // 警告key值为NaN的情况
   if (__DEV__ && vnode.key !== vnode.key) {
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
@@ -500,10 +504,12 @@ function createBaseVNode(
 
 export { createBaseVNode as createElementVNode }
 
+// 创建节点，开发环境下可以调用一些测试方法
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
 ) as typeof _createVNode
 
+// 创建节点的主逻辑
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -512,6 +518,7 @@ function _createVNode(
   dynamicProps: string[] | null = null,
   isBlockNode = false
 ): VNode {
+  // 
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
@@ -567,6 +574,8 @@ function _createVNode(
   }
 
   // encode the vnode type information into a bitmap
+  // type类型为创建节点时传入的标签类型或创建组件时的对象
+  // shapeFlag用于判断节点及其子节点的类型
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
@@ -758,14 +767,20 @@ export function cloneIfMounted(child: VNode): VNode {
     : cloneVNode(child)
 }
 
+// 规范化children字段格式，并且添加子节点相关的shapeFlag
 export function normalizeChildren(vnode: VNode, children: unknown) {
   let type = 0
   const { shapeFlag } = vnode
+  // 不存在子节点不做处理
   if (children == null) {
     children = null
-  } else if (isArray(children)) {
+  } 
+  // 子节点为数组
+  else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
-  } else if (typeof children === 'object') {
+  } 
+  // 子节点为对象
+  else if (typeof children === 'object') {
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default
@@ -796,10 +811,14 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
         }
       }
     }
-  } else if (isFunction(children)) {
+  } 
+  // 子节点为函数
+  else if (isFunction(children)) {
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
-  } else {
+  } 
+  // 子节点为其他形式
+  else {
     children = String(children)
     // force teleport children to array so it can be moved around
     if (shapeFlag & ShapeFlags.TELEPORT) {
@@ -809,6 +828,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       type = ShapeFlags.TEXT_CHILDREN
     }
   }
+  // 整理children字段的格式，合并shapeFlag
   vnode.children = children as VNodeNormalizedChildren
   vnode.shapeFlag |= type
 }

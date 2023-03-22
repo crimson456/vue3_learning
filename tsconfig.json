@@ -19,6 +19,7 @@
     "lib": ["esnext", "dom"],
     "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
+    // 此处设置为import的能访问的目录,不同包之间的引用
     "paths": {
       "@vue/compat": ["packages/vue-compat/src"],
       "@vue/*": ["packages/*/src"],

@@ -63,6 +63,7 @@ export type Directive<T = any, V = any> =
 
 export type DirectiveModifiers = Record<string, boolean>
 
+// 验证自定义指令名是否合法
 export function validateDirectiveName(name: string) {
   if (isBuiltInDirective(name)) {
     warn('Do not use built-in directive ids as custom directive id: ' + name)
@@ -118,6 +119,7 @@ export function withDirectives<T extends VNode>(
   return vnode
 }
 
+// 调用自定义指令的钩子函数
 export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null,

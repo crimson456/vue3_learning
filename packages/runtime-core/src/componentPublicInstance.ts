@@ -231,6 +231,7 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
+// expose暴露时会使用的公用方法
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
@@ -275,8 +276,7 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
-    const { ctx, setupState, data, props, accessCache, type, appContext } =
-      instance
+    const { ctx, setupState, data, props, accessCache, type, appContext } = instance
 
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {
@@ -289,6 +289,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    // 如果要获取的属性不为 $ 开头
+    // 则依次查找setupState、data、props、ctx
     let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
@@ -326,6 +328,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
+    // 获取的是 $ 开头的内置属性或方法的情况
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     // public $xxx properties
@@ -549,12 +552,14 @@ export function exposePropsOnRenderContext(
 }
 
 // dev only
+// 开发环境下
 export function exposeSetupStateOnRenderContext(
   instance: ComponentInternalInstance
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
     if (!setupState.__isScriptSetup) {
+      // 不能范文 $ 和 _ 开头的属性
       if (isReservedPrefix(key[0])) {
         warn(
           `setup() return property ${JSON.stringify(
@@ -564,6 +569,7 @@ export function exposeSetupStateOnRenderContext(
         )
         return
       }
+      // 在组件实例的上下文上暴露setup中的属性
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,

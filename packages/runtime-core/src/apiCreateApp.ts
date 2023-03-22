@@ -158,6 +158,7 @@ export type Plugin<Options = any[]> =
       install: PluginInstallFunction<Options>
     }
 
+// 创建空的上下文环境
 export function createAppContext(): AppContext {
   return {
     app: null as any,
@@ -187,25 +188,30 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
+// 创建createApp函数
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    // 根组件选项进行拷贝
     if (!isFunction(rootComponent)) {
       rootComponent = { ...rootComponent }
     }
 
+    // 传个根组件的props必须为对象形式
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
     }
 
+    // 创建空的app上下文
     const context = createAppContext()
     const installedPlugins = new Set()
 
     let isMounted = false
 
+    // 创建app对象，并且和上下文互相引用
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -228,6 +234,7 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      // 注册插件
       use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
@@ -246,6 +253,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 注册混合
       mixin(mixin: ComponentOptions) {
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
@@ -262,13 +270,18 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 注册组件
       component(name: string, component?: Component): any {
+        // 验证组件名是否合法，不能和slot、template和通用标签重名
         if (__DEV__) {
           validateComponentName(name, context.config)
         }
+
+        // 没有值则获取组件值
         if (!component) {
           return context.components[name]
         }
+        // 有值则赋值
         if (__DEV__ && context.components[name]) {
           warn(`Component "${name}" has already been registered in target app.`)
         }
@@ -276,14 +289,19 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 注册自定义指令
       directive(name: string, directive?: Directive) {
+        // 验证指令名是否合法(不和内部使用的几个冲突)
         if (__DEV__) {
           validateDirectiveName(name)
         }
 
+        // 没有值则获取指令值
         if (!directive) {
           return context.directives[name] as any
         }
+
+        // 有值则赋值
         if (__DEV__ && context.directives[name]) {
           warn(`Directive "${name}" has already been registered in target app.`)
         }
@@ -291,6 +309,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // app挂载
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
@@ -298,6 +317,7 @@ export function createAppAPI<HostElement>(
       ): any {
         if (!isMounted) {
           // #5571
+          // 警告同一个容器挂载两个app的情况
           if (__DEV__ && (rootContainer as any).__vue_app__) {
             warn(
               `There is already an app instance mounted on the host container.\n` +
@@ -305,27 +325,32 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
-          )
+          // 创建虚拟节点
+          const vnode = createVNode( rootComponent as ConcreteComponent, rootProps )
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
+          // 在虚拟节点上挂载上下文
           vnode.appContext = context
 
           // HMR root reload
+          // 热重载时，在上下文上挂载reload方法
           if (__DEV__) {
             context.reload = () => {
               render(cloneVNode(vnode), rootContainer, isSVG)
             }
           }
 
+          // 
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
-          } else {
+          } 
+          // 调用render函数，渲染节点
+          else {
             render(vnode, rootContainer, isSVG)
           }
           isMounted = true
+
+          // app和container互相引用
           app._container = rootContainer
           // for devtools and telemetry
           ;(rootContainer as any).__vue_app__ = app
@@ -335,8 +360,12 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
+          // 如果定义过expose，则返回暴露expose方法的对象
+          // 如果不存在直接返回对象属性的proxy
           return getExposeProxy(vnode.component!) || vnode.component!.proxy
-        } else if (__DEV__) {
+        } 
+        // 已经挂载则警告
+        else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
               `If you want to remount the same app, move your app creation logic ` +
@@ -346,8 +375,10 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      // app卸载
       unmount() {
         if (isMounted) {
+          // 挂载空元素
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
@@ -359,6 +390,7 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      // 根组件provide
       provide(key, value) {
         if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(

@@ -20,6 +20,7 @@ import { queuePostRenderEffect } from './renderer'
 /**
  * Function for handling a template ref
  */
+// 将ref设置在refs中
 export function setRef(
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,

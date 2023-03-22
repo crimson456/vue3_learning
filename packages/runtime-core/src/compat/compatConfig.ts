@@ -523,11 +523,7 @@ export function validateCompatConfig(
   seenConfigObjects.add(config)
 
   for (const key of Object.keys(config)) {
-    if (
-      key !== 'MODE' &&
-      !(key in deprecationData) &&
-      !(key in warnedInvalidKeys)
-    ) {
+    if ( key !== 'MODE' && !(key in deprecationData) && !(key in warnedInvalidKeys) ) {
       if (key.startsWith('COMPILER_')) {
         if (isRuntimeOnly()) {
           warn(

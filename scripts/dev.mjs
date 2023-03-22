@@ -10,25 +10,28 @@ import { createRequire } from 'node:module'
 import minimist from 'minimist'
 import { NodeModulesPolyfillPlugin as nodePolyfills } from '@esbuild-plugins/node-modules-polyfill'
 
+// 此方法用于在esm环境下加载json
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
+// minimist库用于解析命令行命令中的参数
 const args = minimist(process.argv.slice(2))
+// 编译的对象，不填写为vue
 const target = args._[0] || 'vue'
+// 输出格式
 const format = args.f || 'global'
 const inlineDeps = args.i || args.inline
+// 对应包的配置文件
 const pkg = require(`../packages/${target}/package.json`)
 
 // resolve output
-const outputFormat = format.startsWith('global')
-  ? 'iife'
-  : format === 'cjs'
-  ? 'cjs'
-  : 'esm'
+// 处理传入esbuild中的输出格式
+const outputFormat = format.startsWith('global') ? 'iife' : format === 'cjs' ? 'cjs' : 'esm'
 
 const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
   : format
 
+// 输出文件名
 const outfile = resolve(
   __dirname,
   `../packages/${target}/dist/${

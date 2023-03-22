@@ -1,53 +1,296 @@
-# vuejs/core [![npm](https://img.shields.io/npm/v/vue.svg)](https://www.npmjs.com/package/vue) [![build status](https://github.com/vuejs/core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuejs/core/actions/workflows/ci.yml)
 
-## Getting Started
 
-Please follow the documentation at [vuejs.org](https://vuejs.org/)!
 
-## Sponsors
 
-Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsoring Vue's development](https://vuejs.org/sponsor/).
+|packages
+|  |
+|  |--reactivity                 响应式核心
+|  |--compiler-core              与平台无关的编译器核心
+|  |--compiler-dom               针对于浏览器的编辑模块
+|  |--runtime-core               与平台无关的运行时的核心（可以创建针对特定平台的运行时-自定义渲染器）
+|  |--runtime-dom                针对浏览器运行时，包括DOM API属性，事件处理等
+|
+|  |--runtime-test               用于测试
+|  |--reactivity-transform
+|  |--server-renderer            用于服务器端渲染
+|  |--compiler-ssr               针对于服务器端渲染的编译模块
+|  |--compiler-sfc               针对单文件解析
+|  |--sfc-playground
+|  |--size-check                 用来测试代码体积
+|  |--template-explorer          用于调试编译器输出的开发工具
+|  |--shared                     多个包之间的共享内容
+|  |--vue                        完整版本，包括运行时和编译器
+|  |--vue-compat
 
-<p align="center">
-  <h3 align="center">Special Sponsor</h3>
-</p>
 
-<p align="center">
-  <a target="_blank" href="https://github.com/appwrite/appwrite">
-  <img alt="special sponsor appwrite" src="https://sponsors.vuejs.org/images/appwrite.svg" width="300">
-  </a>
-</p>
 
-<p align="center">
-  <a target="_blank" href="https://vuejs.org/sponsor/#current-sponsors">
-    <img alt="sponsors" src="https://sponsors.vuejs.org/sponsors.svg?v2">
-  </a>
-</p>
 
-## Questions
 
-For questions and support please use [the official forum](https://forum.vuejs.org) or [community chat](https://chat.vuejs.org/). The issue list of this repo is **exclusively** for bug reports and feature requests.
 
-## Issues
 
-Please make sure to respect issue requirements and use [the new issue helper](https://new-issue.vuejs.org/) when opening an issue. Issues not conforming to the guidelines may be closed immediately.
 
-## Stay In Touch
 
-- [Twitter](https://twitter.com/vuejs)
-- [Blog](https://blog.vuejs.org/)
-- [Job Board](https://vuejobs.com/?ref=vuejs)
 
-## Contribution
 
-Please make sure to read the [Contributing Guide](https://github.com/vuejs/core/blob/main/.github/contributing.md) before making a pull request. If you have a Vue-related project/component/tool, add it with a pull request to [this curated list](https://github.com/vuejs/awesome-vue)!
+|reactivity/src
+|  |
+|  |--index                        入口，方法的暴露
+|  |--reactive                     reactive响应式对象入口
+|  |--baseHandlers                 基本对象、数组的代理handlers
+|  |--collectionHandlers           集合的代理handlers
+|  |--effect                       ReactiveEffect类定义
+|  |--dep                          dep(Set中保存effect实例)
+|  |--ref                          ref相关
+|  |--computed                     计算属性
+|  |--effectScope                  
+|  |--deferredComputed             
+|  |--operations                   track和trigger操作的类型的定义
+|  |--warning                      控制台警告字符
 
-Thank you to all the people who already contributed to Vue!
 
-<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
 
-## License
 
-[MIT](https://opensource.org/licenses/MIT)
 
-Copyright (c) 2013-present, Yuxi (Evan) You
+
+
+
+
+
+
+
+
+
+|runtime-dom/src
+|  |
+|  |--index                       
+|  |--nodeOps                     
+|  |--patchProp                   
+|  |--apiCustomElement            自定义元素 ???
+|  |
+|  |--components                  
+|  |  |--Transition               
+|  |  |--TransitionGroup          
+|  |
+|  |--directives                  
+|  |  |--vModel                   
+|  |  |--vOn                      
+|  |  |--vShow                    
+|  |
+|  |--modules                     更改属性(patch)的dom操作
+|  |  |--attrs                    
+|  |  |--class                    
+|  |  |--events                   
+|  |  |--props                    
+|  |  |--style                    
+|  |
+|  |--helpers                     
+|  |  |--useCssModule             
+|  |  |--useCssVars               
+
+
+|runtime-core/src
+|  |
+|  |--index                       入口
+|  |--renderer                    render函数
+|  |--apiCreateApp                createApp函数
+|  |--vnode                       虚拟节点相关操作
+|  |--h                           h函数定义(本质为createVNode)
+|  |--scheduler                   effect更新和nextTick的任务队列
+
+|  |--apiComputed                 computed方法
+|  |--apiInject                   provide、inject方法
+
+|  |--enums                       生命周期的缩写枚举值
+|  |--apiLifecycle                生命周期钩子定义(包装和挂载在实例的对应缩写字段)
+
+|  |--apiAsyncComponent           
+|  |--apiDefineComponent          
+
+
+|  |--apiSetupHelpers             
+|  |--apiWatch                    
+|  |--component                   
+|  |--componentEmits              
+|  |--componentOptions            
+|  |--componentProps              
+|  |--componentPublicInstance     
+|  |--componentRenderContext      
+|  |--componentRenderUtils        
+|  |--componentSlots              
+|  |--customFormater              
+|  |--devtools                    
+|  |--directives                  
+
+|  |--rendererTemplateRef         ref(获取实例的方法)
+
+|  |--errorHandling               错误处理
+|  |--featureFlags                兼容性的全局标志的初始化
+
+|  |--hmr                         
+|  |--hydration                   
+|  |--profiling                   通过window.performance计算各个部分花费的时间
+
+
+|  |--warning                     警告处理
+|  |
+|  |--compat
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |
+|  |--components
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |
+|  |--helpers
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+|  |  |--
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+|compiler-dom/src
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+
+
+
+
+
+
+|compiler-core/src
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+
+
+
+
+
+
+
+|compiler-sfc/src
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+|  |--
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

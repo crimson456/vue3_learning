@@ -120,12 +120,12 @@ function createParserContext(
   const options = extend({}, defaultParserOptions)
 
   let key: keyof ParserOptions
+  // 合并配置时定义的选项和默认选项
   for (key in rawOptions) {
     // @ts-ignore
-    options[key] =
-      rawOptions[key] === undefined
-        ? defaultParserOptions[key]
-        : rawOptions[key]
+    options[key] = rawOptions[key] === undefined
+                    ? defaultParserOptions[key]
+                    : rawOptions[key]
   }
   return {
     options,

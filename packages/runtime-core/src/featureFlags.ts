@@ -7,14 +7,17 @@ import { getGlobalThis } from '@vue/shared'
  *
  * istanbul-ignore-next
  */
+// 初始化一些兼容性的标志位
 export function initFeatureFlags() {
   const needWarn = []
 
+  // vue2选项式api兼容的标志
   if (typeof __FEATURE_OPTIONS_API__ !== 'boolean') {
     __DEV__ && needWarn.push(`__VUE_OPTIONS_API__`)
     getGlobalThis().__VUE_OPTIONS_API__ = true
   }
 
+  // ???
   if (typeof __FEATURE_PROD_DEVTOOLS__ !== 'boolean') {
     __DEV__ && needWarn.push(`__VUE_PROD_DEVTOOLS__`)
     getGlobalThis().__VUE_PROD_DEVTOOLS__ = false

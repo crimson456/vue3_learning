@@ -69,23 +69,16 @@ export function renderComponentRoot(
   }
 
   try {
+    // 普通组件调用render
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
-      result = normalizeVNode(
-        render!.call(
-          proxyToUse,
-          proxyToUse!,
-          renderCache,
-          props,
-          setupState,
-          data,
-          ctx
-        )
-      )
+      result = normalizeVNode( render!.call( proxyToUse, proxyToUse!, renderCache, props, setupState, data, ctx))
       fallthroughAttrs = attrs
-    } else {
+    }
+    // 函数式组件调用render
+    else {
       // functional
       const render = Component as FunctionalComponent
       // in dev, mark attrs accessed if optional props (attrs === props)
@@ -124,11 +117,7 @@ export function renderComponentRoot(
   // to have comments along side the root element which makes it a fragment
   let root = result
   let setRoot: SetRootFn = undefined
-  if (
-    __DEV__ &&
-    result.patchFlag > 0 &&
-    result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-  ) {
+  if (__DEV__ && result.patchFlag > 0 && result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
     ;[root, setRoot] = getChildRoot(result)
   }
 

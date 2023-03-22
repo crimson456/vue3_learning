@@ -18,15 +18,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
+  // 创建元素节点
   createElement: (tag, isSVG, is, props): Element => {
-    const el = isSVG
-      ? doc.createElementNS(svgNS, tag)
-      : doc.createElement(tag, is ? { is } : undefined)
-
+    // 根据是否为svg元素有命名空间的元素
+    const el = isSVG ? doc.createElementNS(svgNS, tag) : doc.createElement(tag, is ? { is } : undefined)
     if (tag === 'select' && props && props.multiple != null) {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
     }
-
     return el
   },
 
@@ -70,6 +68,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       }
     } else {
       // fresh insert
+      // 生成节点并插入
       templateContainer.innerHTML = isSVG ? `<svg>${content}</svg>` : content
       const template = templateContainer.content
       if (isSVG) {

@@ -82,9 +82,10 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
+  // 生成ast
   const ast = isString(template) ? baseParse(template, options) : template
-  const [nodeTransforms, directiveTransforms] =
-    getBaseTransformPreset(prefixIdentifiers)
+
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(prefixIdentifiers)
 
   if (!__BROWSER__ && options.isTS) {
     const { expressionPlugins } = options
